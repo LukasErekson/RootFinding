@@ -552,8 +552,9 @@ def getAbsApproxTol(func, deg, a, b):
         ----------
             func : function
                 Function to approximate.
-            def : int
-                The degree to use to approximate the function on the interval.
+            deg : int
+                The (low) degree of the Chebyshev polynomial used to 
+                approximate the function on the interval.
             a : numpy array
                 The lower bounds of the interval on which to approximate.
             b : numpy array
@@ -569,6 +570,7 @@ def getAbsApproxTol(func, deg, a, b):
     np.random.seed(0)
     for i in range(10):
         x = transform(np.random.rand(len(a))*2-1, a, b)
+        # Defined to be close to machine epsilon.
         linearization_size = 2.220446049250313e-14
         a = np.array(x - linearization_size)
         b = np.array(x + linearization_size)
