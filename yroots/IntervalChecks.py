@@ -82,7 +82,7 @@ class IntervalData:
         for check in self.subinterval_checks:
             self.interval_results[check.__name__] = []
         self.interval_results["Base Case"] = []
-        self.interval_results["Spectral"] = []
+        self.interval_results["Moller-Stetter"] = []
         self.interval_results["Too Deep"] = []
         self.total_area = np.prod(self.b-self.a)
         self.current_area = 0.
@@ -277,16 +277,16 @@ class IntervalData:
                     if first:
                         first = False
                         rect = patches.Rectangle((a0[0],a0[1]),b0[0]-a0[0],b0[1]-a0[1],linewidth=.1,\
-                                                 edgecolor='red',facecolor=colors[i], label=check)
+                                                 edgecolor='gray',facecolor=colors[i], label=check)
                     else:
                         rect = patches.Rectangle((a0[0],a0[1]),b0[0]-a0[0],b0[1]-a0[1],linewidth=.1,\
-                                                 edgecolor='red',facecolor=colors[i])
+                                                 edgecolor='gray',facecolor=colors[i])
                     ax.add_patch(rect)
             plt.legend()
 
         #Plot the zeros
         if len(zeros) > 0:
-            plt.plot(np.real(zeros[:,0]), np.real(zeros[:,1]),'o',color='#ffff00',markeredgecolor='#ffff00',markersize=3,
+            plt.plot(np.real(zeros[:,0]), np.real(zeros[:,1]),'o',color='r',markeredgecolor='r',markersize=3,
                  zorder=22)        
         
 #         plt.plot(0.41589487873818587, -0.2682102425236283,'o',color='k',markeredgecolor='k',markersize=3,
