@@ -123,7 +123,7 @@ def generate_tests(degree, num_trials):
 
     with open('YRoots v. Chebfun.txt','a') as fi:
         fi.write('Degree 5 - ' + str(degree) + '\n')
-        fi.write(str(YRoots_times))
+        fi.write(str(YRoots_times) + '\n\n')
     return YRoots_times
 
 

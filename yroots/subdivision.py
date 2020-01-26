@@ -176,10 +176,10 @@ def solve(funcs, a, b, rel_approx_tol=1.e-10, abs_approx_tol=1.e-13,
             interval_data.start_polish_interval()
             solve_func(funcs,new_a,new_b,deg,interval_data,root_tracker,tols,max_level)
             root_tracker.keep_possible_duplicates()
-    print("\rPercent Finished: 100%{}".format(' '*50))
+    # print("\rPercent Finished: 100%{}".format(' '*50))
 
     #Print results
-    interval_data.print_results()
+    # interval_data.print_results()
 
     #Plotting
     if plot:
@@ -654,7 +654,7 @@ def subdivision_solve_nd(funcs,a,b,deg,interval_data,root_tracker,tols,max_level
                 tols.abs_approx_tol = max(tols.abs_approx_tol, numSpots * getAbsApproxTol(func, 3, a, b))
 
     cheb_approx_list = []
-    interval_data.print_progress()
+    # interval_data.print_progress()
     dim = len(a)
     if good_degs is None:
         good_degs = [None]*len(funcs)
@@ -925,7 +925,7 @@ def subdivision_solve_1d(f,a,b,deg,interval_data,root_tracker,tols,max_level,lev
         return
 
     RAND = 0.5139303900908738
-    interval_data.print_progress()
+    # interval_data.print_progress()
     coeff, inf_norm = interval_approximate_1d(f,a,b,deg)
     coeff2, inf_norm = interval_approximate_1d(f,a,b,deg*2,inf_norm)
     coeff2[slice_top(coeff)] -= coeff
