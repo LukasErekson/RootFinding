@@ -23,12 +23,12 @@ import itertools
 import time
 import warnings
 
-def solve(funcs, a, b, rel_approx_tol=1.e-8, abs_approx_tol=1.e-12,
+def solve(funcs, a, b, rel_approx_tol=1.e-10, abs_approx_tol=1.e-13,
           trim_zero_tol=1.e-10, max_cond_num=1e5, macaulay_zero_tol=1.e-13,
           good_zeros_factor=100, min_good_zeros_tol=1e-5,
-          check_eval_error=True, check_eval_freq = 1, plot = False,
+          check_eval_error=False, check_eval_freq = 1, plot = False,
           plot_intervals = False, deg = None, max_level=999,
-          return_potentials=False):
+          return_potentials=False, chebfunify=True):
     '''
     Finds the real roots of the given list of functions on a given interval.
 
@@ -132,9 +132,40 @@ def solve(funcs, a, b, rel_approx_tol=1.e-8, abs_approx_tol=1.e-12,
             funcs = funcs[0]
     else:
         solve_func = subdivision_solve_nd
+        # Chebfunify the functions
+        if chebfunify:
+            cheb_funcs = list()
+            approx_deg = deg
+            for func in funcs:
+                # cheb_func = full_cheb_approximate(func, a, b, approx_deg, abs_approx_tol, rel_approx_tol)
+                
+                # Create a list to save the previous approximation (save on calculation)
+                coeff = [None, None]
+                coeff[0], inf_norm = interval_approximate_nd(func,a,b,approx_deg)
+                # Approximate until sufficiently accurate (Chebcoeffs are returned)
+                # while cheb_func[0] is None:
+                abs_tol = 1.e-15
+                rel_tol = 1.e-12
+                while True:
+                    approx_deg *= 2
+                    # cheb_func = full_cheb_approximate(func, a, b, approx_deg, abs_approx_tol, rel_approx_tol)
+                    # Get the 2*approx_deg approximation
+                    coeff[1], bools, inf_norm = interval_approximate_nd(func,a,b,approx_deg*2,return_bools=True, inf_norm=inf_norm)
+                    error = np.sum(np.abs(coeff[1][slice_top(coeff[0])] - coeff[0]))
+                    # Check if the error is small enough
+                    if error > abs_tol+rel_tol*inf_norm:
+                        coeff[0] = coeff[1]
+                    else:
+                        break
+                cheb_funcs.append(MultiCheb(coeff[0]))
+                approx_deg = deg
+
 
     #Initial Solve
-    solve_func(funcs,a,b,deg,interval_data,root_tracker,tols,max_level)
+    if chebfunify:
+        solve_func(cheb_funcs,a,b,deg,interval_data,root_tracker,tols,max_level)
+    else:
+        solve_func(funcs,a,b,deg,interval_data,root_tracker,tols,max_level)
     root_tracker.keep_possible_duplicates()
 
     #Polishing
