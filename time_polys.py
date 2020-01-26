@@ -114,7 +114,7 @@ def generate_tests(degree, num_trials):
             with open('chebfun_polys.m', 'a') as fi:
                 fi.write('f = @(x,y) ' + poly_str(f, 'matlab') + ';\n')
                 fi.write('g = @(x,y) ' + poly_str(g, 'matlab') + ';\n')
-                fi.write('deg_time = deg_time + timeIt(f,g);' + ';\n\n')
+                fi.write('deg_time = deg_time + timeIt(f,g);\n\n')
         YRoots_times.append(deg_time/num_trials)
 
         with open('chebfun_polys.m', 'a') as fi:
