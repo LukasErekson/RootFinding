@@ -24,6 +24,11 @@ import time
 import warnings
 from numba import jit
 
+
+from statistics import mean
+err_file_name = "Calculated Error vs Subdivision Level"
+err_dict = {i:[] for i in range(50)}
+
 def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
           max_cond_num=1e5, good_zeros_factor=100, min_good_zeros_tol=1e-5,
           check_eval_error=True, check_eval_freq=1, plot=False,
@@ -182,6 +187,26 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
 
     if len(root_tracker.potential_roots) != 0:
         warnings.warn("Some intervals subdivided too deep and some potential roots were found. To access these roots, rerun the solver with the keyword return_potentials=True")
+
+
+    max_err = []
+    mean_err =[]
+    for key in err_dict:
+        if len(err_dict[key]) != 0:
+            max_err.append(max(err_dict[key]))
+            mean_err.append(mean(err_dict[key]))
+
+    plt.xlabel('Subdivision Level')
+    plt.ylabel('Calculated Error')
+    plt.yscale('log')
+    plt.title(err_file_name)
+    plt.gcf().set_size_inches(8,8)
+    plt.boxplot([err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
+    plt.plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
+    plt.plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
+    plt.plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=r'$\epsilon_{machine}$')
+    plt.legend()
+    plt.show()
 
     if return_potentials:
         return root_tracker.roots, root_tracker.potential_roots
@@ -698,8 +723,12 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
 
             cheb_approx_list.append(coeff)
 
+
+    err_dict[level] += approx_errors
     # Reduce the degree of the approximations while not introducing too much error
     coeffs, good_approx, approx_errors = trim_coeffs(cheb_approx_list, tols.abs_approx_tol, tols.rel_approx_tol, inf_norms, approx_errors)
+
+    
 
     # Used if subdividing further.
     # Only choose good_degs if the approximation after trim_coeffs is good.
