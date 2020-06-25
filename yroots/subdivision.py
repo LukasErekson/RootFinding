@@ -27,7 +27,7 @@ from numba import jit
 
 from statistics import mean
 err_file_name = "Calculated Error vs Subdivision Level"
-err_dict = {i:[] for i in range(50)}
+
 
 def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
           max_cond_num=1e5, good_zeros_factor=100, min_good_zeros_tol=1e-5,
@@ -191,17 +191,36 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
 
     max_err = []
     mean_err =[]
-    for key in err_dict:
-        if len(err_dict[key]) != 0:
-            max_err.append(max(err_dict[key]))
-            mean_err.append(mean(err_dict[key]))
+    for key in interval_data.approx_err_dict:
+        if len(interval_data.approx_err_dict[key]) != 0:
+            max_err.append(max(interval_data.approx_err_dict[key]))
+            mean_err.append(mean(interval_data.approx_err_dict[key]))
 
     plt.xlabel('Subdivision Level')
     plt.ylabel('Calculated Error')
     plt.yscale('log')
-    plt.title(err_file_name)
+    plt.title("Approx Error vs. Subdivision Level")
     plt.gcf().set_size_inches(8,8)
-    plt.boxplot([err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
+    plt.boxplot([interval_data.approx_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
+    plt.plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
+    plt.plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
+    plt.plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=r'$\epsilon_{machine}$')
+    plt.legend()
+    plt.show()
+
+    max_err = []
+    mean_err =[]
+    for key in interval_data.trim_err_dict:
+        if len(interval_data.trim_err_dict[key]) != 0:
+            max_err.append(max(interval_data.trim_err_dict[key]))
+            mean_err.append(mean(interval_data.trim_err_dict[key]))
+
+    plt.xlabel('Subdivision Level')
+    plt.ylabel('Calculated Error')
+    plt.yscale('log')
+    plt.title("trim_coeffs Error vs. Subdivision Level")
+    plt.gcf().set_size_inches(8,8)
+    plt.boxplot([interval_data.trim_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
     plt.plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
     plt.plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
     plt.plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=r'$\epsilon_{machine}$')
@@ -724,10 +743,11 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
             cheb_approx_list.append(coeff)
 
 
-    err_dict[level] += approx_errors
+    interval_data.approx_err_dict[level] += approx_errors
     # Reduce the degree of the approximations while not introducing too much error
     coeffs, good_approx, approx_errors = trim_coeffs(cheb_approx_list, tols.abs_approx_tol, tols.rel_approx_tol, inf_norms, approx_errors)
 
+    interval_data.trim_err_dict[level] += approx_errors
     
 
     # Used if subdividing further.
