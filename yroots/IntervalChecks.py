@@ -105,8 +105,10 @@ class IntervalData:
         self.backcond = 0
 
         #For keeping track of errors
-        self.approx_err_dict = {i:[] for i in range(50)}
-        self.trim_err_dict = {i:[] for i in range(50)}
+        self.approx_err_dict = {i:[] for i in range(100)}
+        self.trim_err_dict = {i:[] for i in range(100)}
+        self.target_tol_dict = {i:[] for i in range(100)}
+        self.good_degs_dict = {i:[] for i in range(100)}
 
     def add_polish_intervals(self, polish_intervals):
         ''' Add the intervals that polishing will be run on.
