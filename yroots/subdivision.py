@@ -27,11 +27,14 @@ from statistics import mean
 err_file_name = "Calculated Error vs Subdivision Level"
 
 macheps = 2.220446049250313e-16
+approx_err_dict = {i:[] for i in range(16)}
+trim_err_dict = {i:[] for i in range(16)}
+
 
 def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
           max_cond_num=1e5, good_zeros_factor=100, min_good_zeros_tol=1e-5,
           check_eval_error=True, check_eval_freq=1, plot=False,
-          plot_intervals=False, deg=None, target_deg=None, max_level=999,
+          plot_intervals=False, deg=None, target_deg=None, max_level=8,
           return_potentials=False, method='svd', target_tol=1.01*macheps,
           trust_small_evals=False, plot_name="Errors vs. Subdivision Level"):
     """
@@ -529,7 +532,8 @@ def get_subintervals(a,b,dimensions,interval_data,polys,change_sign,approx_error
         bTemp[dimensions] -= subset*diffs2
         subintervals.append((aTemp,bTemp))
 
-    if check_subintervals:
+    # Prevent subinterval checkts.
+    if False and check_subintervals:
         # get intervals -1 to 1
         scaled_subintervals = get_subintervals(-np.ones_like(a),np.ones_like(a),dimensions,None,None,None,approx_error)
         return interval_data.check_subintervals(subintervals, scaled_subintervals, polys, change_sign, approx_error)
@@ -579,10 +583,10 @@ def full_cheb_approximate(f,a,b,deg,abs_approx_tol,rel_approx_tol,good_deg=None)
     coeff2[slice_top(coeff)] -= coeff
 
     error = np.sum(np.abs(coeff2))
-    if error > abs_approx_tol+rel_approx_tol*inf_norm:
-        return None, bools, inf_norm, error
-    else:
-        return coeff, bools, inf_norm, error
+    # if error > abs_approx_tol+rel_approx_tol*inf_norm:
+    return coeff, bools, inf_norm, error
+    # else:
+        # return coeff, bools, inf_norm, error
 
 def good_zeros_nd(zeros, imag_tol, real_tol):
     """Get the real zeros in the -1 to 1 interval in each dimension.
@@ -757,6 +761,7 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
             coeff,change_sign,inf_norm,approx_error = full_cheb_approximate(func,a,b,deg,tols.abs_approx_tol,tols.rel_approx_tol, good_deg)
         inf_norms.append(inf_norm)
         approx_errors.append(approx_error)
+        interval_data.approx_err_dict[level].append(approx_error)
         if good_deg is None:
             interval_data.good_degs_dict[level].append(deg)
         else:
@@ -777,13 +782,14 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
             # Run checks to try and throw out the interval
             if not trust_small_evals:
                 approx_error = max(approx_error,macheps)
-            if interval_data.check_interval(coeff, approx_error, a, b):
-                return
+            # Ignore interval checks for now
+            # if interval_data.check_interval(coeff, approx_error, a, b):
+            #     return
 
             cheb_approx_list.append(coeff)
 
 
-    interval_data.approx_err_dict[level] += approx_errors
+    
     # Reduce the degree of the approximations while not introducing too much error
     coeffs, good_approx, approx_errors = trim_coeffs(cheb_approx_list, tols.abs_approx_tol, tols.rel_approx_tol, inf_norms, approx_errors)
 
