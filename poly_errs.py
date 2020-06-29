@@ -7,9 +7,9 @@ import time
 a = -np.ones(2)
 b = np.ones(2)
 num_loops = 1
-num_tests = 1
-start_deg = 80
-larger_deg = 80
+num_tests = 20
+start_deg = 2
+larger_deg = 40
 deg_skip = 1
 
 for deg in range(start_deg, larger_deg + 1, deg_skip):
@@ -25,7 +25,7 @@ for deg in range(start_deg, larger_deg + 1, deg_skip):
         g = MultiPower(c2)
         
         yr.solve([f,g], a, b, plot_name="Random Degree {} Bivariate Polys".format(deg),
-                 plot_err=test==num_tests-1, max_level=10)# or test%5 == 4)
+                 plot_err=test==num_tests-1, max_level=9)# or test%5 == 4)
         
         del c1, c2, f, g
         
