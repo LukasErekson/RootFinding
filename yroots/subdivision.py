@@ -22,13 +22,15 @@ from scipy.linalg import lu
 import time
 import warnings
 from numba import jit
+import pickle
 
 from statistics import mean
-err_file_name = "Calculated Error vs Subdivision Level"
+err_file_name = "Chebfun2 Suite Average Error Reduction"
 
 macheps = 2.220446049250313e-16
 approx_err_dict = {i:[] for i in range(16)}
 trim_err_dict = {i:[] for i in range(16)}
+good_degs_dict = {i:[] for i in range(16)}
 
 
 def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
@@ -36,7 +38,8 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
           check_eval_error=True, check_eval_freq=1, plot=False,
           plot_intervals=False, deg=None, target_deg=None, max_level=8,
           return_potentials=False, method='svd', target_tol=1.01*macheps,
-          trust_small_evals=False, plot_name="Errors vs. Subdivision Level"):
+          trust_small_evals=False, plot_name="Chebfun2 Suite Average Error Reduction",
+          plot_err=False):
     """
     Finds the real roots of the given list of functions on a given interval.
 
@@ -196,66 +199,80 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
     if len(root_tracker.potential_roots) != 0:
         warnings.warn("Some intervals subdivided too deep and some potential roots were found. To access these roots, rerun the solver with the keyword return_potentials=True")
 
+    if plot_err:
+        max_err = []
+        mean_err = []
+        min_err = []
+        for key in approx_err_dict:
+            if len(approx_err_dict[key]) != 0:
+                max_err.append(max(approx_err_dict[key]))
+                mean_err.append(mean(approx_err_dict[key]))
+                min_err.append(min(approx_err_dict[key]))
 
-    max_err = []
-    mean_err = []
-    min_err = []
-    for key in interval_data.approx_err_dict:
-        if len(interval_data.approx_err_dict[key]) != 0:
-            max_err.append(max(interval_data.approx_err_dict[key]))
-            mean_err.append(mean(interval_data.approx_err_dict[key]))
-            min_err.append(min(interval_data.approx_err_dict[key]))
+        fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
+        plt.suptitle(plot_name)
+        # plt.subplot(121)
+        ax[0].set_xlabel('Subdivision Level')
+        ax[0].set_ylabel('Calculated Error')
+        ax[0].set_yscale('log')
+        ax[0].set_title("Approx Error vs. Subdivision Level")
+        fig.set_size_inches(10,5)
+        # plt.boxplot([approx_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
+        ax[0].plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
+        ax[0].plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
+        ax[0].plot(np.arange(len(max_err)), min_err, label='Min Calculated Error')
+        ax[0].plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=r'$\epsilon_{machine}$')
+        ax[0].legend()
+        # plt.show()
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
-    plt.suptitle(plot_name)
-    # plt.subplot(121)
-    ax[0].set_xlabel('Subdivision Level')
-    ax[0].set_ylabel('Calculated Error')
-    ax[0].set_yscale('log')
-    ax[0].set_title("Approx Error vs. Subdivision Level")
-    fig.set_size_inches(10,5)
-    # plt.boxplot([interval_data.approx_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
-    ax[0].plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
-    ax[0].plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
-    ax[0].plot(np.arange(len(max_err)), min_err, label='Min Calculated Error')
-    ax[0].plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=r'$\epsilon_{machine}$')
-    ax[0].legend()
-    # plt.show()
+        max_err = []
+        mean_err = []
+        min_err = []
+        for key in trim_err_dict:
+            if len(trim_err_dict[key]) != 0:
+                max_err.append(max(trim_err_dict[key]))
+                mean_err.append(mean(trim_err_dict[key]))
+                min_err.append(min(trim_err_dict[key]))
 
-    max_err = []
-    mean_err = []
-    min_err = []
-    for key in interval_data.trim_err_dict:
-        if len(interval_data.trim_err_dict[key]) != 0:
-            max_err.append(max(interval_data.trim_err_dict[key]))
-            mean_err.append(mean(interval_data.trim_err_dict[key]))
-            min_err.append(min(interval_data.trim_err_dict[key]))
+        # plt.subplot(122)
+        ax[1].set_xlabel('Subdivision Level')
+        ax[1].set_ylabel('Calculated Error')
+        ax[1].set_yscale('log')
+        ax[1].set_title("trim_coeffs Error vs. Subdivision Level")
+        # plt.gcf().set_size_inches(8,8)
+        # plt.boxplot([trim_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
+        ax[1].plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
+        ax[1].plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
+        ax[1].plot(np.arange(len(max_err)), min_err, label='Min Calculated Error')
+        ax[1].plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=(r'$\epsilon_{machine}$'))
+        # ax[1].legend()
+        # plt.show()
+        plt.savefig("Error_plots/{}_errs.pdf".format(plot_name), bbox_inches='tight')
+        plt.clf()
 
-    # plt.subplot(122)
-    ax[1].set_xlabel('Subdivision Level')
-    ax[1].set_ylabel('Calculated Error')
-    ax[1].set_yscale('log')
-    ax[1].set_title("trim_coeffs Error vs. Subdivision Level")
-    # plt.gcf().set_size_inches(8,8)
-    # plt.boxplot([interval_data.trim_err_dict[i] for i in range(len(max_err))], positions=np.arange(len(max_err)), meanline=True)
-    ax[1].plot(np.arange(len(max_err)), max_err, label='Maximum Calculated Error')
-    ax[1].plot(np.arange(len(max_err)), mean_err, label='Mean Calculated Error')
-    ax[1].plot(np.arange(len(max_err)), min_err, label='Min Calculated Error')
-    ax[1].plot(np.arange(len(max_err)), [2.2e-16 for _ in range(len(max_err))], label=(r'$\epsilon_{machine}$'))
-    # ax[1].legend()
+        with open('Error_plots/approx_err_dict_{}.pkl'.format(plot_name), 'wb') as ofile:
+            pickle.dump(approx_err_dict, ofile)
 
-    # Just for looking at target_tol or good_degs
-    # max_tol = []
-    # for key in interval_data.good_degs_dict:
-    #     if len(interval_data.good_degs_dict[key]) != 0:
-    #         max_tol.append(min(interval_data.good_degs_dict[key]))
+        with open('Error_plots/trim_err_dict{}.pkl'.format(plot_name), 'wb') as ofile:
+            pickle.dump(trim_err_dict, ofile)
 
+        with open('Error_plots/good_degs_dict_{}.pkl'.format(plot_name), 'wb') as ofile:
+            pickle.dump(good_degs_dict, ofile)
 
-    # ax[2].plot(np.arange(len(max_tol)), max_tol, label='good_degs')
-    # ax[2].set_xlabel("Subdivision Level")
-    # ax[2].set_ylabel("good_deg")
+        # Just for looking at target_tol or good_degs
+        max_tol = []
+        for key in good_degs_dict:
+            if len(good_degs_dict[key]) != 0:
+                max_tol.append(mean(good_degs_dict[key]))
 
-    plt.show()
+        plt.plot(np.arange(len(max_tol)), max_tol, label='good_degs')
+        plt.xlabel("Subdivision Level")
+        plt.ylabel("good_deg")
+        plt.title("Good_deg vs. level")
+        plt.yscale('linear')
+        plt.savefig("Error_plots/{}_good_degs.pdf".format(plot_name), bbox_inches='tight')
+
+        # plt.show()
 
     if return_potentials:
         return root_tracker.roots, root_tracker.potential_roots
@@ -727,24 +744,24 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
         root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
         return
 
-    if tols.check_eval_error:
-        # Using the first abs_approx_tol
-        if not use_target_tol:
-            tols.abs_approx_tol = tols.abs_approx_tols[tols.currTol]
-            if level%tols.check_eval_freq == 0:
-                numSpots = (deg*2)**len(a) - (deg)**len(a)
-                for func in funcs:
-                    tols.abs_approx_tol = max(tols.abs_approx_tol, numSpots * get_abs_approx_tol(func, 3, a, b))
+    # if tols.check_eval_error:
+    #     # Using the first abs_approx_tol
+    #     if not use_target_tol:
+    #         tols.abs_approx_tol = tols.abs_approx_tols[tols.currTol]
+    #         if level%tols.check_eval_freq == 0:
+    #             numSpots = (deg*2)**len(a) - (deg)**len(a)
+    #             for func in funcs:
+    #                 tols.abs_approx_tol = max(tols.abs_approx_tol, numSpots * get_abs_approx_tol(func, 3, a, b))
             
-            interval_data.target_tol_dict[level].append(tols.target_tol)
-        # Using target_tol
-        else:
-            tols.target_tol = tols.target_tols[tols.currTol]
-            if level%tols.check_eval_freq == 0:
-                numSpots = (deg*2)**len(a) - (deg)**len(a)
-                for func in funcs:
-                    tols.target_tol = max(tols.target_tol, numSpots * get_abs_approx_tol(func, 3, a, b))
-                    interval_data.target_tol_dict[level].append(tols.target_tol)
+    #         interval_data.target_tol_dict[level].append(tols.target_tol)
+    #     # Using target_tol
+    #     else:
+    #         tols.target_tol = tols.target_tols[tols.currTol]
+    #         if level%tols.check_eval_freq == 0:
+    #             numSpots = (deg*2)**len(a) - (deg)**len(a)
+    #             for func in funcs:
+    #                 tols.target_tol = max(tols.target_tol, numSpots * get_abs_approx_tol(func, 3, a, b))
+    #                 interval_data.target_tol_dict[level].append(tols.target_tol)
 
     cheb_approx_list = []
     interval_data.print_progress()
@@ -761,11 +778,11 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
             coeff,change_sign,inf_norm,approx_error = full_cheb_approximate(func,a,b,deg,tols.abs_approx_tol,tols.rel_approx_tol, good_deg)
         inf_norms.append(inf_norm)
         approx_errors.append(approx_error)
-        interval_data.approx_err_dict[level].append(approx_error)
+        approx_err_dict[level].append(approx_error)
         if good_deg is None:
-            interval_data.good_degs_dict[level].append(deg)
+            good_degs_dict[level].append(deg)
         else:
-            interval_data.good_degs_dict[level].append(good_deg)
+            good_degs_dict[level].append(good_deg)
         # Subdivides if a bad approximation
         if coeff is None:
             if not trust_small_evals:
@@ -793,19 +810,16 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
     # Reduce the degree of the approximations while not introducing too much error
     coeffs, good_approx, approx_errors = trim_coeffs(cheb_approx_list, tols.abs_approx_tol, tols.rel_approx_tol, inf_norms, approx_errors)
 
-    
-    
-
     if not trust_small_evals:
         approx_errors = [max(err,macheps) for err in approx_errors]
 
-    interval_data.trim_err_dict[level] += approx_errors
+    trim_err_dict[level] += approx_errors
     # Used if subdividing further.
     # Only choose good_degs if the approximation after trim_coeffs is good.
     if good_approx:
         # good_degs are assumed to be 1 higher than the current approx for more
         # accurate performance.
-        good_degs = [coeff.shape[0] for coeff in coeffs]
+        good_degs = [coeff.shape[0] - 1 for coeff in coeffs]
         good_zeros_tol = max(tols.min_good_zeros_tol, sum(np.abs(approx_errors))*tols.good_zeros_factor)
 
     # Check if the degree is small enough or if trim_coeffs introduced too much error
