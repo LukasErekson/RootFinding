@@ -39,7 +39,7 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
           plot_intervals=False, deg=None, target_deg=None, max_level=8,
           return_potentials=False, method='svd', target_tol=1.01*macheps,
           trust_small_evals=False, plot_name="Chebfun2 Suite Average Error Reduction",
-          plot_err=False):
+          plot_err=True):
     """
     Finds the real roots of the given list of functions on a given interval.
 
@@ -789,6 +789,12 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
                 approx_errors = [max(err,macheps) for err in approx_errors]
             intervals = get_subintervals(a,b,get_div_dirs(dim),interval_data,cheb_approx_list,change_sign,approx_errors)
             for new_a, new_b in intervals:
+                if level >= max_level:
+                    # TODO Refine case where there may be a root and it goes too deep.
+                    interval_data.track_interval("Too Deep", [a, b])
+                    # Return potential roots if the residuals are small
+                    root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
+                    return
                 subdivision_solve_nd(funcs,new_a,new_b,deg,target_deg,interval_data,root_tracker,tols,max_level,level=level+1, method=method, trust_small_evals=trust_small_evals)
             return
         else:
@@ -826,17 +832,35 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
     if np.any(np.array([coeff.shape[0] for coeff in coeffs]) > target_deg) or not good_approx:
         intervals = get_subintervals(a,b,get_div_dirs(dim),interval_data,cheb_approx_list,change_sign,approx_errors,True)
         for new_a, new_b in intervals:
+            if level >= max_level:
+                # TODO Refine case where there may be a root and it goes too deep.
+                interval_data.track_interval("Too Deep", [a, b])
+                # Return potential roots if the residuals are small
+                root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
+                return
             subdivision_solve_nd(funcs,new_a,new_b,deg, target_deg,interval_data,root_tracker,tols,max_level,good_degs,level+1, method=method, trust_small_evals=trust_small_evals, use_target_tol=True)
 
     # Check if any approx error is greater than target_tol for Macaulay method
     elif np.any(np.array(approx_errors) > np.array(tols.target_tol) + tols.rel_approx_tol*np.array(inf_norms)):
         intervals = get_subintervals(a,b,get_div_dirs(dim),interval_data,cheb_approx_list,change_sign,approx_errors,True)
         for new_a, new_b in intervals:
+            if level >= max_level:
+                # TODO Refine case where there may be a root and it goes too deep.
+                interval_data.track_interval("Too Deep", [a, b])
+                # Return potential roots if the residuals are small
+                root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
+                return
             subdivision_solve_nd(funcs,new_a,new_b,deg, target_deg,interval_data,root_tracker,tols,max_level,good_degs,level+1, method=method, trust_small_evals=trust_small_evals, use_target_tol=True)
 
     # Check if everything is linear
     elif np.all(np.array([coeff.shape[0] for coeff in coeffs]) == 2):
         if deg != 2:
+            if level >= max_level:
+                # TODO Refine case where there may be a root and it goes too deep.
+                interval_data.track_interval("Too Deep", [a, b])
+                # Return potential roots if the residuals are small
+                root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
+                return
             subdivision_solve_nd(funcs,a,b,2,target_deg,interval_data,root_tracker,tols,max_level,good_degs,level, method=method, trust_small_evals=trust_small_evals, use_target_tol=True)
             return
         zero, cond = solve_linear(coeffs)
@@ -855,6 +879,12 @@ def subdivision_solve_nd(funcs,a,b,deg,target_deg,interval_data,root_tracker,tol
             # Subdivide but run some checks on the intervals first
             intervals = get_subintervals(a,b,get_div_dirs(dim),interval_data,cheb_approx_list,change_sign,approx_errors,True)
             for new_a, new_b in intervals:
+                if level >= max_level:
+                    # TODO Refine case where there may be a root and it goes too deep.
+                    interval_data.track_interval("Too Deep", [a, b])
+                    # Return potential roots if the residuals are small
+                    root_tracker.add_potential_roots((a + b)/2, a, b, "Too Deep.")
+                    return
                 subdivision_solve_nd(funcs,new_a,new_b,deg, target_deg,interval_data,root_tracker,tols,max_level,good_degs,level+1, method=method, trust_small_evals=trust_small_evals, use_target_tol=True)
         else:
             zeros = res
