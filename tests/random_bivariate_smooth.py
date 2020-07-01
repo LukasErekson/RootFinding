@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     if dim == 2:
         # Run 2D Tests - These seeds have known roots
-        for seed in [0, 3, 9, 49, 102, 123, 224, 265, 316, 329, 456, 1011, 1234, 8675309][:1]:
+        for seed in [0, 3, 9, 49, 102, 123, 224, 265, 316, 329, 456, 1011, 1234, 8675309]:
             print("Running 2D Tests with seed {}".format(seed))
             np.random.seed(seed)
             F = RandSmoothFunc()
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     if dim == 3:
         # Run 3D Tests - These seeds have not been tested for roots. Just for subdivision purposes.
-        for seed in range(0,20,2):
+        for seed in range(0,10):
             print("Running 3D Tests with seed {}".format(seed))
             np.random.seed(seed)
             F = RandSmoothFunc(ThreeD_Basis, dim=3)
