@@ -25,25 +25,28 @@ class IntervalData:
     interval_checks: list
         A list of functions. Each function accepts a coefficient matrix and a tolerance,
         and returns whether the Chebyshev Polynomial represented by that matrix, and
-        accurate to within that tolerance, can ever be zero on the n dimensional interval [-1,1].
+        accurate to within that tolerance, can ever be zero on the n dimensional interval [-1, 1].
     subinterval_checks: list
         A list of functions. Each function accepts a coefficient matrix, a list of subintervals, a list of
         sign changes, and a tolerance. It then returns a list of booleans whether the Chebyshev Polynomial
         represented by that matrix, and accurate to within that tolerance, can ever be zero on the given subintervals.
-        Before the checks can be run the subintervals must be rescaled to subintervals of [-1,1]
+        Before the checks can be run the subintervals must be rescaled to subintervals of [-1, 1]
         The list of sign changes represents if we already know the function changes sign on a given subinterval.
     a: numpy array
         The lower bounds of the overall interval to solve on.
     b: numpy array
         The upper bounds of the overall interval to solve on.
     interval_results: dictionary
-        A dictionary of funciton names to lists of intervals that were solved by that function.
+        A dictionary of funciton names to lists of intervals that were
+        solved by that function.
     total_area: float
-        The total n dimensional volume of the overall interval being solved on.
+        The total n dimensional volume of the overall interval being
+        solved on.
     current_area: float
         How much of the n dimensional volume has been checked.
     polishing: bool
-        If true this class is just being used as a shell to pass into the polish code.
+        If true this class is just being used as a shell to pass into
+        the polish code.
     polish_intervals: list
         The intervals polishing will be run on
     polish_num: int
@@ -56,7 +59,8 @@ class IntervalData:
         The upper bounds of the interval being polished
 
     tick: int
-        Keeps track of how many intervals have been solved. Every 100 it resets and prints the progress.
+        Keeps track of how many intervals have been solved. Every 100 it
+        resets and prints the progress.
 
     Methods
     -------
@@ -71,11 +75,12 @@ class IntervalData:
     print_progress
         Prints what percentage of the domain has been searched
     print_results
-        Prints the results of how much each method contributed to the overall search
+        Prints the results of how much each method contributed to the
+        overall search
     plot_results
         Plots the results of subdivision solve
     '''
-    def __init__(self,a,b):
+    def __init__(self, a, b):
         self.interval_checks = [constant_term_check]
         self.subinterval_checks = [quadratic_check]
         self.a = a
@@ -86,7 +91,8 @@ class IntervalData:
         for check in self.subinterval_checks:
             self.interval_results[check.__name__] = []
         self.interval_results["Base Case"] = []
-        self.interval_results["Macaulay"] = []
+        if isinstance(a, np.float64):  # Only have Macaulay for 1D 
+            self.interval_results["Macaulay"] = []
         self.interval_results["Too Deep"] = []
         self.total_area = np.prod(self.b-self.a)
         self.current_area = 0.
@@ -127,7 +133,7 @@ class IntervalData:
         self.current_area = 0.
 
     def check_interval(self, coeff, error, a, b):
-        ''' Runs the interval checks on the interval [a,b]
+        ''' Runs the interval checks on the interval [a, b]
 
         Parameters
         ----------
@@ -147,12 +153,12 @@ class IntervalData:
         for check in self.interval_checks:
             if not check(coeff, error):
                 if not self.polishing:
-                    self.track_interval(check.__name__, [a,b])
+                    self.track_interval(check.__name__, [a, b])
                 return True
         return False
 
     def check_subintervals(self, subintervals, scaled_subintervals, polys, errors):
-        ''' Runs the subinterval checks on the given subintervals of [-1,1]
+        ''' Runs the subinterval checks on the given subintervals of [-1, 1]
 
         Parameters
         ----------
@@ -170,7 +176,7 @@ class IntervalData:
             True if we can throw out the interval. Otherwise False.
         '''
         for check in self.subinterval_checks:
-            for poly,error in zip(polys, errors):
+            for poly, error in zip(polys, errors):
                 mask = check(poly, scaled_subintervals, error)
                 new_scaled_subintervals = []
                 new_subintervals = []
@@ -193,7 +199,7 @@ class IntervalData:
         name : string
             The name of the check or process (Macaulay, Base Case, Too Deep) that solved this interval
         interval: list
-            [a,b] where a and b are the lower and upper bound of the interval to track.
+            [a, b] where a and b are the lower and upper bound of the interval to track.
         '''
         if not self.polishing:
             self.interval_results[name].append(interval)
@@ -207,11 +213,11 @@ class IntervalData:
         if self.tick >= 100:
             self.tick = 0
             if not self.polishing:
-                print("\rPercent Finished: {}%       ".format(round(100*self.current_area/self.total_area,2)), end='')
+                print("\rPercent Finished: {}%       ".format(round(100*self.current_area/self.total_area, 2)), end='')
             else:
                 print_string =  '\rPolishing Round: {}'.format(self.polish_num)
                 print_string += ' Interval: {}/{}:'.format(self.polish_interval_num, len(self.polish_intervals))
-                print_string += " Percent Finished: {}%{}".format(round(100*self.current_area/self.total_area,2), ' '*20)
+                print_string += " Percent Finished: {}%{}".format(round(100*self.current_area/self.total_area, 2), ' '*20)
                 print(print_string, end='')
 
     def print_results(self):
@@ -243,32 +249,32 @@ class IntervalData:
         #make logo
         #make easier to input lower/upper bounds as a list
         plt.figure(dpi=600)
-        fig,ax = plt.subplots(1)
+        fig, ax = plt.subplots(1)
         fig.set_size_inches(6.5, 3)
-        plt.xlim(self.a[0],self.b[0])
+        plt.xlim(self.a[0], self.b[0])
         plt.xlabel('$x$')
-        plt.ylim(self.a[1],self.b[1])
+        plt.ylim(self.a[1], self.b[1])
         plt.ylabel('$y$')
         plt.title('Zero-Loci and Roots')
 
         dim = 2
 
         #print the contours
-        contour_colors = ['#003cff','#50c878'] #royal blue and emerald green
-        x = np.linspace(self.a[0],self.b[0],1000)
-        y = np.linspace(self.a[1],self.b[1],1000)
-        X,Y = np.meshgrid(x,y)
+        contour_colors = ['#003cff', '#50c878'] #royal blue and emerald green
+        x = np.linspace(self.a[0], self.b[0], 1000)
+        y = np.linspace(self.a[1], self.b[1], 1000)
+        X, Y = np.meshgrid(x, y)
         for i in range(dim):
             if isinstance(funcs[i], Polynomial):
                 Z = np.zeros_like(X)
-                for spot,num in np.ndenumerate(X):
-                    Z[spot] = funcs[i]([X[spot],Y[spot]])
-                plt.contour(X,Y,Z,levels=[0],colors=contour_colors[i])
+                for spot, num in np.ndenumerate(X):
+                    Z[spot] = funcs[i]([X[spot], Y[spot]])
+                plt.contour(X, Y, Z, levels=[0], colors=contour_colors[i])
             else:
-                plt.contour(X,Y,funcs[i](X,Y),levels=[0],colors=contour_colors[i])
+                plt.contour(X, Y, funcs[i](X, Y), levels=[0], colors=contour_colors[i])
 
-        colors = ['w','#c3c3c3', 'C8', '#708090', '#897A57', '#D6C7A4','#73e600','#ccff99']
-        #colors = ['w','#d3d3d3', '#708090', '#c5af7d', '#897A57', '#D6C7A4','#73e600','#ccff99']
+        colors = ['w', '#c3c3c3', 'C8', '#708090', '#897A57', '#D6C7A4', '#73e600', '#ccff99']
+        #colors = ['w', '#d3d3d3', '#708090', '#c5af7d', '#897A57', '#D6C7A4', '#73e600', '#ccff99']
 
         if plot_intervals:
             plt.title('')
@@ -280,20 +286,20 @@ class IntervalData:
                 results = self.interval_results[check]
                 first = True
                 for data in results:
-                    a0,b0 = data
+                    a0, b0 = data
                     if first:
                         first = False
-                        rect = patches.Rectangle((a0[0],a0[1]),b0[0]-a0[0],b0[1]-a0[1],linewidth=.1,\
-                                                 edgecolor='red',facecolor=colors[i], label=check)
+                        rect = patches.Rectangle((a0[0], a0[1]), b0[0]-a0[0], b0[1]-a0[1], linewidth=.1, \
+                                                 edgecolor='red', facecolor=colors[i], label=check)
                     else:
-                        rect = patches.Rectangle((a0[0],a0[1]),b0[0]-a0[0],b0[1]-a0[1],linewidth=.1,\
-                                                 edgecolor='red',facecolor=colors[i])
+                        rect = patches.Rectangle((a0[0], a0[1]), b0[0]-a0[0], b0[1]-a0[1], linewidth=.1, \
+                                                 edgecolor='red', facecolor=colors[i])
                     ax.add_patch(rect)
             plt.legend()
 
         #Plot the zeros
         if len(zeros) > 0:
-            plt.plot(np.real(zeros[:,0]), np.real(zeros[:,1]),'o',color='#ff0000',markeredgecolor='#ff0000',markersize=3,
+            plt.plot(np.real(zeros[:, 0]), np.real(zeros[:, 1]), 'o', color='#ff0000', markeredgecolor='#ff0000', markersize=3,
                  zorder=22)
 
         if print_plot:
@@ -324,7 +330,7 @@ def constant_term_check(test_coeff, tol):
     else:
         return True
 
-def quadratic_check(test_coeff, intervals,tol):
+def quadratic_check(test_coeff, intervals, tol):
     """One of subinterval_checks
 
     Finds the min of the absolute value of the quadratic part, and compares to the sum of the
@@ -386,17 +392,17 @@ def quadratic_check_2D(test_coeff, intervals, tol):
     #Padding is slow, so check the shape instead.
     c = [0]*6
     shape = test_coeff.shape
-    c[0] = test_coeff[0,0]
+    c[0] = test_coeff[0, 0]
     if shape[0] > 1:
-        c[1] = test_coeff[1,0]
+        c[1] = test_coeff[1, 0]
     if shape[1] > 1:
-        c[2] = test_coeff[0,1]
+        c[2] = test_coeff[0, 1]
     if shape[0] > 2:
-        c[3] = test_coeff[2,0]
+        c[3] = test_coeff[2, 0]
     if shape[0] > 1 and shape[1] > 1:
-        c[4] = test_coeff[1,1]
+        c[4] = test_coeff[1, 1]
     if shape[1] > 2:
-        c[5] = test_coeff[0,2]
+        c[5] = test_coeff[0, 2]
 
     # The sum of the absolute values of the other coefs
     # Note: Overhead for instantiating a NumPy array is too costly for
@@ -409,7 +415,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
     k0 = c[0]-c[3]-c[5]
     k3 = 2*c[3]
     k5 = 2*c[5]
-    def eval_func(x,y):
+    def eval_func(x, y):
         return k0 + (c[1] + k3 * x + c[4] * y) * x  + (c[2] + k5 * y) * y
 
     #The interior min
@@ -427,7 +433,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
 
 
     for i, interval in enumerate(intervals):
-        min_satisfied, max_satisfied = False,False
+        min_satisfied, max_satisfied = False, False
         #Check all the corners
         eval = eval_func(interval[0][0], interval[0][1])
         min_satisfied = min_satisfied or eval < other_sum
@@ -461,7 +467,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
             x = interval[0][0]
             y = -(c[2] + c[4]*x)/cc5
             if interval[0][1] < y < interval[1][1]:
-                eval = eval_func(x,y)
+                eval = eval_func(x, y)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -469,7 +475,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
             x = interval[1][0]
             y = -(c[2] + c[4]*x)/cc5
             if interval[0][1] < y < interval[1][1]:
-                eval = eval_func(x,y)
+                eval = eval_func(x, y)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -483,7 +489,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
             y = interval[0][1]
             x = -(c[1] + c[4]*y)/cc3
             if interval[0][0] < x < interval[1][0]:
-                eval = eval_func(x,y)
+                eval = eval_func(x, y)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -492,7 +498,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
             y = interval[1][1]
             x = -(c[1] + c[4]*y)/cc3
             if interval[0][0] < x < interval[1][0]:
-                eval = eval_func(x,y)
+                eval = eval_func(x, y)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -500,7 +506,7 @@ def quadratic_check_2D(test_coeff, intervals, tol):
 
         #Check the interior value
         if interval[0][0] < int_x < interval[1][0] and interval[0][1] < int_y < interval[1][1]:
-            eval = eval_func(int_x,int_y)
+            eval = eval_func(int_x, int_y)
             min_satisfied = min_satisfied or eval < other_sum
             max_satisfied = max_satisfied or eval > -other_sum
             if min_satisfied and max_satisfied:
@@ -542,25 +548,25 @@ def quadratic_check_3D(test_coeff, intervals, tol):
     #Padding is slow, so check the shape instead.
     c = [0]*10
     shape = test_coeff.shape
-    c[0] = test_coeff[0,0,0]
+    c[0] = test_coeff[0, 0, 0]
     if shape[0] > 1:
-        c[1] = test_coeff[1,0,0]
+        c[1] = test_coeff[1, 0, 0]
     if shape[1] > 1:
-        c[2] = test_coeff[0,1,0]
+        c[2] = test_coeff[0, 1, 0]
     if shape[2] > 1:
-        c[3] = test_coeff[0,0,1]
+        c[3] = test_coeff[0, 0, 1]
     if shape[0] > 1 and shape[1] > 1:
-        c[4] = test_coeff[1,1,0]
+        c[4] = test_coeff[1, 1, 0]
     if shape[0] > 1 and shape[2] > 1:
-        c[5] = test_coeff[1,0,1]
+        c[5] = test_coeff[1, 0, 1]
     if shape[1] > 1 and shape[2] > 1:
-        c[6] = test_coeff[0,1,1]
+        c[6] = test_coeff[0, 1, 1]
     if shape[0] > 2:
-        c[7] = test_coeff[2,0,0]
+        c[7] = test_coeff[2, 0, 0]
     if shape[1] > 2:
-        c[8] = test_coeff[0,2,0]
+        c[8] = test_coeff[0, 2, 0]
     if shape[2] > 2:
-        c[9] = test_coeff[0,0,2]
+        c[9] = test_coeff[0, 0, 2]
 
     #The sum of the absolute values of everything else
     other_sum = np.sum(np.abs(test_coeff)) - sum([fabs(coeff) for coeff in c]) + tol
@@ -571,7 +577,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
     k7 = 2*c[7]
     k8 = 2*c[8]
     k9 = 2*c[9]
-    def eval_func(x,y,z):
+    def eval_func(x, y, z):
         return k0 + (c[1] + k7 * x + c[4] * y + c[5] * z) * x + \
                     (c[2] + k8 * y + c[6] * z) * y + \
                     (c[3] + k9 * z) * z
@@ -610,7 +616,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
         z0 = interval[0][2]
         z1 = interval[1][2]
 
-        min_satisfied, max_satisfied = False,False
+        min_satisfied, max_satisfied = False, False
         #Check all the corners
         eval = eval_func(x0, y0, z0)
         min_satisfied = min_satisfied or eval < other_sum
@@ -660,7 +666,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c6y0 = c[6]*y0
             z = -(c5x0_c3+c6y0)/kk9
             if z0 < z < z1:
-                eval = eval_func(x0,y0,z)
+                eval = eval_func(x0, y0, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -668,7 +674,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c6y1 = c[6]*y1
             z = -(c5x0_c3+c6y1)/kk9
             if z0 < z < z1:
-                eval = eval_func(x0,y1,z)
+                eval = eval_func(x0, y1, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -676,14 +682,14 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c5x1_c3 = c[5]*x1 + c[3]
             z = -(c5x1_c3+c6y0)/kk9
             if z0 < z < z1:
-                eval = eval_func(x1,y0,z)
+                eval = eval_func(x1, y0, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
                     continue
             z = -(c5x1_c3+c6y1)/kk9
             if z0 < z < z1:
-                eval = eval_func(x1,y1,z)
+                eval = eval_func(x1, y1, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -697,7 +703,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c2_c4x0 = c[2]+c[4]*x0
             y = -(c2_c4x0+c6z0)/kk8
             if y0 < y < y1:
-                eval = eval_func(x0,y,z0)
+                eval = eval_func(x0, y, z0)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -705,7 +711,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c6z1 = c[6]*z1
             y = -(c2_c4x0+c6z1)/kk8
             if y0 < y < y1:
-                eval = eval_func(x0,y,z1)
+                eval = eval_func(x0, y, z1)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -713,14 +719,14 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c2_c4x1 = c[2]+c[4]*x1
             y = -(c2_c4x1+c6z0)/kk8
             if y0 < y < y1:
-                eval = eval_func(x1,y,z0)
+                eval = eval_func(x1, y, z0)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
                     continue
             y = -(c2_c4x1+c6z1)/kk8
             if y0 < y < y1:
-                eval = eval_func(x1,y,z1)
+                eval = eval_func(x1, y, z1)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -734,7 +740,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c5z0 = c[5]*z0
             x = -(c1_c4y0+c5z0)/kk7
             if x0 < x < x1:
-                eval = eval_func(x,y0,z0)
+                eval = eval_func(x, y0, z0)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -742,7 +748,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c5z1 = c[5]*z1
             x = -(c1_c4y0+c5z1)/kk7
             if x0 < x < x1:
-                eval = eval_func(x,y0,z1)
+                eval = eval_func(x, y0, z1)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -750,14 +756,14 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             c1_c4y1 = c[1]+c[4]*y1
             x = -(c1_c4y1+c5z0)/kk7
             if x0 < x < x1:
-                eval = eval_func(x,y1,z0)
+                eval = eval_func(x, y1, z0)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
                     continue
             x = -(c1_c4y1+c5z1)/kk7
             if x0 < x < x1:
-                eval = eval_func(x,y1,z1)
+                eval = eval_func(x, y1, z1)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -773,7 +779,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             y = (-kk9*c2_c4x0 +   c[6]*c3_c5x0)/fix_x_det
             z = (c[6]*c2_c4x0 -    kk8*c3_c5x0)/fix_x_det
             if y0 < y < y1 and z0 < z < z1:
-                eval = eval_func(x0,y,z)
+                eval = eval_func(x0, y, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -783,7 +789,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             y = (-kk9*c2_c4x1 +   c[6]*c3_c5x1)/fix_x_det
             z = (c[6]*c2_c4x1 -    kk8*c3_c5x1)/fix_x_det
             if y0 < y < y1 and z0 < z < z1:
-                eval = eval_func(x1,y,z)
+                eval = eval_func(x1, y, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -799,7 +805,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             x = (-kk9*c1_c4y0 +   c[5]*c3_c6y0)/fix_y_det
             z = (c[5]*c1_c4y0 -    kk7*c3_c6y0)/fix_y_det
             if x0 < x < x1 and z0 < z < z1:
-                eval = eval_func(x,y0,z)
+                eval = eval_func(x, y0, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -809,7 +815,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             x = (-kk9*c1_c4y1 +   c[5]*c3_c6y1)/fix_y_det
             z = (c[5]*c1_c4y1 -    kk7*c3_c6y1)/fix_y_det
             if x0 < x < x1 and z0 < z < z1:
-                eval = eval_func(x,y1,z)
+                eval = eval_func(x, y1, z)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -825,7 +831,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             x = (-kk8*c1_c5z0 +   c[4]*c2_c6z0)/fix_z_det
             y = (c[4]*c1_c5z0 -    kk7*c2_c6z0)/fix_z_det
             if x0 < x < x1 and y0 < y < y1:
-                eval = eval_func(x,y,z0)
+                eval = eval_func(x, y, z0)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -835,7 +841,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
             x = (-kk8*c1_c5z1 +   c[4]*c2_c6z1)/fix_z_det
             y = (c[4]*c1_c5z1 -    kk7*c2_c6z1)/fix_z_det
             if x0 < x < x1 and y0 < y < y1:
-                eval = eval_func(x,y,z1)
+                eval = eval_func(x, y, z1)
                 min_satisfied = min_satisfied or eval < other_sum
                 max_satisfied = max_satisfied or eval > -other_sum
                 if min_satisfied and max_satisfied:
@@ -844,7 +850,7 @@ def quadratic_check_3D(test_coeff, intervals, tol):
         #Add the interior value
         if x0 < int_x < x1 and y0 < int_y < y1 and\
                 z0 < int_z < z1:
-            eval = eval_func(int_x,int_y,int_z)
+            eval = eval_func(int_x, int_y, int_z)
             min_satisfied = min_satisfied or eval < other_sum
             max_satisfied = max_satisfied or eval > -other_sum
             if min_satisfied and max_satisfied:
@@ -873,7 +879,7 @@ def get_fixed_vars(dim):
         domain and the interior extremum.
     """
     return list(itertools.chain.from_iterable(itertools.combinations(range(dim), r)\
-                                             for r in range(dim-1,0,-1)))
+                                             for r in range(dim-1, 0, -1)))
 
 def quadratic_check_nd(test_coeff, intervals, tol):
     """One of subinterval_checks
@@ -902,13 +908,13 @@ def quadratic_check_nd(test_coeff, intervals, tol):
     #get the dimension and make sure the coeff tensor has all the right
     # quadratic coeff spots, set to zero if necessary
     dim = test_coeff.ndim
-    padding = [(0,max(0,3-i)) for i in test_coeff.shape]
+    padding = [(0, max(0, 3-i)) for i in test_coeff.shape]
     test_coeff = np.pad(test_coeff.copy(), padding, mode='constant')
 
     #Possible extrema of qudaratic part are where D_xk = 0 for some subset of the variables xk
     # with the other variables are fixed to a boundary value
-    #Dxk = c[0,...,0,1,0,...0] (k-spot is 1) + 4c[0,...,0,2,0,...0] xk (k-spot is 2)
-    #       + \Sum_{j\neq k} xj c[0,...,0,1,0,...,0,1,0,...0] (k and j spot are 1)
+    #Dxk = c[0, ..., 0, 1, 0, ...0] (k-spot is 1) + 4c[0, ..., 0, 2, 0, ...0] xk (k-spot is 2)
+    #       + \Sum_{j\neq k} xj c[0, ..., 0, 1, 0, ..., 0, 1, 0, ...0] (k and j spot are 1)
     #This gives a symmetric system of equations AX+B = 0
     #We will fix different columns of X each time, resulting in slightly different
     #systems, but storing A and B now will be helpful later
@@ -916,10 +922,10 @@ def quadratic_check_nd(test_coeff, intervals, tol):
     #pull out coefficients we care about
     quad_coeff = np.zeros([3]*dim)
     #A and B are arrays for slicing
-    A = np.zeros([dim,dim])
+    A = np.zeros([dim, dim])
     B = np.zeros(dim)
     pure_quad_coeff = [0]*dim
-    for spot in itertools.product(range(3),repeat=dim):
+    for spot in itertools.product(range(3), repeat=dim):
         spot_deg = sum(spot)
         if spot_deg == 1:
             #coeff of linear terms
@@ -936,10 +942,10 @@ def quadratic_check_nd(test_coeff, intervals, tol):
             where_nonzero = [idx for idx in range(dim) if spot[idx]!= 0]
             if len(where_nonzero) == 2:
                 #coeff of cross terms
-                i,j = where_nonzero
+                i, j = where_nonzero
                 #with symmetric matrices, we only need to store the lower part
-                A[j,i] = test_coeff[spot].copy()
-                A[i,j] = A[j,i]
+                A[j, i] = test_coeff[spot].copy()
+                A[i, j] = A[j, i]
                 #todo: see if we can store this in only one half of A
                
             else:
@@ -956,9 +962,9 @@ def quadratic_check_nd(test_coeff, intervals, tol):
     def eval_func(point):
         "fast evaluation of quadratic chebyshev polynomials using horner's algorithm"
         _sum = k0
-        for i,coord in enumerate(point):
+        for i, coord in enumerate(point):
             _sum += (B[i] + pure_quad_coeff_doubled[i]*coord + \
-                     sum([A[i,j]*point[j] for j in range(i+1,dim)])) * coord
+                     sum([A[i, j]*point[j] for j in range(i+1, dim)])) * coord
         return _sum
 
     #The sum of the absolute values of everything else
@@ -969,11 +975,11 @@ def quadratic_check_nd(test_coeff, intervals, tol):
 
     for k, interval in enumerate(intervals):
         Done = False
-        min_satisfied, max_satisfied = False,False
+        min_satisfied, max_satisfied = False, False
         #fix all variables--> corners
-        for corner in itertools.product([0,1],repeat=dim):
+        for corner in itertools.product([0, 1], repeat=dim):
             #j picks if upper/lower bound. i is which var
-            eval = eval_func([interval[j][i] for i,j in enumerate(corner)])
+            eval = eval_func([interval[j][i] for i, j in enumerate(corner)])
             min_satisfied = min_satisfied or eval < other_sum
             max_satisfied = max_satisfied or eval > -other_sum
             if min_satisfied and max_satisfied:
@@ -987,24 +993,24 @@ def quadratic_check_nd(test_coeff, intervals, tol):
                 #we only care about the equations from the unfixed variables
                 fixed = np.array(fixed)
                 unfixed = np.delete(np.arange(dim), fixed)
-                A_ = A[unfixed][:,unfixed]
+                A_ = A[unfixed][:, unfixed]
                 #if diagonal entries change sign, can't be definite
                 diag = np.diag(A_)
-                for i,c in enumerate(diag[:-1]):
+                for i, c in enumerate(diag[:-1]):
                     #sign change?
                     if c*diag[i+1]<0:
                         break
                 #if no sign change, can find extrema
                 else:
                     #not full rank --> no soln
-                    if np.linalg.matrix_rank(A_,hermitian=True) == A_.shape[0]:
-                        fixed_A = A[unfixed][:,fixed]
+                    if np.linalg.matrix_rank(A_, hermitian=True) == A_.shape[0]:
+                        fixed_A = A[unfixed][:, fixed]
                         B_ = B[unfixed]
-                        for side in itertools.product([0,1],repeat=len(fixed)):
-                            X0 = np.array([interval[j][i] for i,j in enumerate(side)])
+                        for side in itertools.product([0, 1], repeat=len(fixed)):
+                            X0 = np.array([interval[j][i] for i, j in enumerate(side)])
                             X_ = la.solve(A_, -B_-fixed_A@X0, assume_a='sym')
                             #make sure it's in the domain
-                            for i,var in enumerate(unfixed):
+                            for i, var in enumerate(unfixed):
                                 if interval[0][var] <= X_[i] <= interval[1][var]:
                                     continue
                                 else:
@@ -1023,14 +1029,14 @@ def quadratic_check_nd(test_coeff, intervals, tol):
             else:
                 #fix no vars--> interior
                 #if diagonal entries change sign, can't be definite
-                for i,c in enumerate(pure_quad_coeff[:-1]):
+                for i, c in enumerate(pure_quad_coeff[:-1]):
                     #sign change?
                     if c*pure_quad_coeff[i+1]<0:
                         break
                 #if no sign change, can find extrema
                 else:
                     #not full rank --> no soln
-                    if np.linalg.matrix_rank(A,hermitian=True) == A.shape[0]:
+                    if np.linalg.matrix_rank(A, hermitian=True) == A.shape[0]:
                         X = la.solve(A, -B, assume_a='sym')
                         #make sure it's in the domain
                         for i in range(dim):
