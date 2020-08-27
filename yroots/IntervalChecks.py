@@ -7,7 +7,6 @@ then all run to throw out intervals as possible.
 import numpy as np
 from itertools import product
 import itertools
-from yroots.polynomial import MultiCheb
 from matplotlib import pyplot as plt
 from yroots.polynomial import MultiCheb, Polynomial
 from matplotlib import patches
