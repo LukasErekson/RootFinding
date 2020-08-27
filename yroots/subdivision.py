@@ -1102,12 +1102,11 @@ def subdivision_solve_1d(f, a, b, deg, interval_data, root_tracker,
             if interval_data.check_interval(coeff, error, a, b):
                 return
 
-        # TODO : Remove Macaulay in 1D or not?
         try:
             good_zeros_tol = max(tols.min_good_zeros_tol, error*tols.good_zeros_factor)
             zeros = transform(good_zeros_1d(multCheb(coeff), good_zeros_tol, good_zeros_tol), a, b)
-            interval_data.track_interval("Macaulay", [a, b])
-            root_tracker.add_roots(zeros, a, b, "Macaulay")
+            interval_data.track_interval("Colleague Matrix", [a, b])
+            root_tracker.add_roots(zeros, a, b, "Colleague Matrix")
         except (ConditioningError) as e:
             div_spot = a + (b-a)*RAND
             subdivision_solve_1d(f, a, div_spot, good_deg, interval_data, root_tracker, tols, max_level, level+1)

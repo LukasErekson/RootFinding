@@ -91,8 +91,8 @@ class IntervalData:
         for check in self.subinterval_checks:
             self.interval_results[check.__name__] = []
         self.interval_results["Base Case"] = []
-        if isinstance(a, np.float64):  # Only have Macaulay for 1D 
-            self.interval_results["Macaulay"] = []
+        if isinstance(a, np.float64):  # Only have Colleague for 1D
+            self.interval_results["Colleague Matrix"] = []
         self.interval_results["Too Deep"] = []
         self.total_area = np.prod(self.b-self.a)
         self.current_area = 0.
@@ -158,16 +158,19 @@ class IntervalData:
         return False
 
     def check_subintervals(self, subintervals, scaled_subintervals, polys, errors):
-        ''' Runs the subinterval checks on the given subintervals of [-1, 1]
+        ''' Runs the subinterval checks on the given subintervals of
+        [-1, 1]
 
         Parameters
         ----------
         subintervals : list
             A list of the intervals to check.
         scaled_subintervals: list
-            A list of the subintervals to check, scaled to be within the unit box that the approxiations are valid on.
+            A list of the subintervals to check, scaled to be within the
+            unit box that the approxiations are valid on.
         polys: list
-            The coefficient tensors of Chebyshev polynomials that approximate the functions on these intervals..
+            The coefficient tensors of Chebyshev polynomials that
+            approximate the functions on these intervals..
         errors: list
             The approximation errors of the polynomials.
         Returns
@@ -215,7 +218,7 @@ class IntervalData:
             if not self.polishing:
                 print("\rPercent Finished: {}%       ".format(round(100*self.current_area/self.total_area, 2)), end='')
             else:
-                print_string =  '\rPolishing Round: {}'.format(self.polish_num)
+                print_string = '\rPolishing Round: {}'.format(self.polish_num)
                 print_string += ' Interval: {}/{}:'.format(self.polish_interval_num, len(self.polish_intervals))
                 print_string += " Percent Finished: {}%{}".format(round(100*self.current_area/self.total_area, 2), ' '*20)
                 print(print_string, end='')
