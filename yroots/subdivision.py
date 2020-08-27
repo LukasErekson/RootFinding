@@ -1,24 +1,19 @@
 """
-Subdivision provides a solve function that finds roots of a set of functions
-by approximating the functions with Chebyshev polynomials.
+Subdivision provides a solve function that finds roots of a set of
+functions by approximating the functions with Chebyshev polynomials.
 When the approximation is performed on a sufficiently small interval,
-the approximation degree is small enough to be solved efficiently.
-
+the approximation degree is linear and can therefore be solved easily.
 """
 
 import numpy as np
 from scipy.fftpack import fftn
-from yroots.OneDimension import divCheb, divPower, multCheb, multPower, solve
-from yroots.Multiplication import multiplication
-from yroots.utils import clean_zeros_from_matrix, slice_top, MacaulayError, \
-                        get_var_list, ConditioningError, TooManyRoots, \
-                        Tolerances, solve_linear, memoize, Memoize
-from yroots.polynomial import MultiCheb
+from yroots.OneDimension import multCheb
+from yroots.utils import slice_top, ConditioningError, \
+                         Tolerances, solve_linear, memoize, Memoize
 from yroots.IntervalChecks import IntervalData
 from yroots.RootTracker import RootTracker
 from itertools import product
 from matplotlib import pyplot as plt
-from scipy.linalg import lu
 import time
 import warnings
 from numba import jit
@@ -27,25 +22,26 @@ macheps = 2.220446049250313e-16
 
 
 def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
-          max_cond_num=1e5, good_zeros_factor=100, min_good_zeros_tol=1e-5,
+          good_zeros_factor=100, min_good_zeros_tol=1e-5,
           check_eval_error=True, check_eval_freq=1, plot=False,
           plot_intervals=False, deg=None, max_level=999,
           return_potentials=False, target_tol=1.01*macheps,
           trust_small_evals=False):
     """
-    Finds the real roots of the given list of functions on a given interval.
+    Finds the real roots of the given list of functions on a given
+    interval.
 
-    All of the tolerances can be passed in as numbers of iterable types. If
-    multiple are passed in as iterable types they must have the same length.
-    When the length is more than 1, they are used one after the other to polish
-    the roots.
+    All of the tolerances can be passed in as numbers of iterable types.
+    If multiple are passed in as iterable types they must have the same
+    length. When the length is more than 1, they are used one after the
+    other to polish the roots.
 
     Parameters
     ----------
     funcs : list of vectorized, callable functions
         Functions to find the common roots of.
-        More efficient if functions have an 'evaluate_grid' method handle
-        function evaluation at an grid of points.
+        More efficient if functions have an 'evaluate_grid'
+        method to handle function evaluation at a grid of points.
     a : numpy array
         The lower bound on the interval.
     b : numpy array
@@ -58,33 +54,35 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         The absolute tolerance used in the approximation tolerance. The
         error is bouned by
         error < abs_approx_tol + rel_approx_tol * inf_norm_of_approximation
-    max_cond_num : float or list
-        The maximum condition number of the Macaulay Matrix Reduction
-    macaulay_zero_tol : float or list
-        What is considered 0 in the macaulay matrix reduction.
     good_zeros_factor : float or list
-        Multiplying this by the approximation error gives how far outside of [-1, 1] a root can
-        be and still be considered inside the interval.
+        Multiplying this by the approximation error gives how far
+        outside of [-1, 1] a root can be and still be considered inside
+        the interval.
     min_good_zeros_tol : float or list
-        The smallest the good_zeros_tol can be, which is how far outside of [-1, 1] a root can
-        be and still be considered inside the interval.
+        The smallest the good_zeros_tol can be, which is how far outside
+        of [-1, 1] a root can be and still be considered inside the
+        interval.
     check_eval_error : bool
-        Whether to compute the evaluation error on the fly and replace the approx tol with it.
+        Whether to compute the evaluation error on the fly and replace
+        the approx tol with it.
     check_eval_freq : int
-        The evaluation error will be computed on levels that are multiples of this.
+        The evaluation error will be computed on levels that are
+        multiples of this.
     plot : bool
-        If True plots the zeros-loci of the functions along with the computed roots
+        If True plots the zeros-loci of the functions along with the
+        computed roots
     plot_intervals : bool
-        If True, plot is True, and the functions are 2 dimensional, plots what check/method solved
+        If True, plot is True, and the functions are 2 dimensional,
+        plots what check/method solved
         each part of the interval.
     deg : int
-        The degree used for the approximation. If None, the following degrees
-        are used.
+        The degree used for the approximation. If None, the following
+        degrees are used.
         Degree 100 for 1D functions.
         Degree 20 for 2D functions.
-        Degree 9 for 3D functions.
-        Degree 9 for 4D functions.
-        Degree 2 for 5D functions and above.
+        Degree 20 for 3D functions.
+        Degree 16 for 4D functions.
+        Degree 10 for 5D functions and above.
     max_level : int
         The maximum levels deep the recursion will go. Increasing it
         above 999 may result in recursion error!
@@ -92,13 +90,15 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         If True, returns the potential roots. Else, it does not.
     target_tol : float
         The final absolute approximation tolerance to use before using
-        any sort of solver (Macaulay, linear, etc).
+        the linear solver.
     trust_small_evals : bool
         Whether or not to trust function evaluations that may give
         floats smaller than machine epsilon. This should only be set to
         True if the function evaluations are very accurate.
+    
     If finding roots of a univariate function, `funcs` does not need to
     be a list, and `a` and `b` can be floats instead of arrays.
+    
     Returns
     -------
     zeros : numpy array
@@ -130,14 +130,14 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         abs_approx_tol = max(abs_approx_tol, 1.01*macheps)
     tols = Tolerances(rel_approx_tol=rel_approx_tol,
                       abs_approx_tol=abs_approx_tol,
-                      max_cond_num=max_cond_num,
                       good_zeros_factor=good_zeros_factor,
                       min_good_zeros_tol=min_good_zeros_tol,
                       check_eval_error=check_eval_error,
                       check_eval_freq=check_eval_freq,
                       target_tol=target_tol)
     tols.nextTols()
-    # Set up the interval data and root tracker classes and cheb blocky copy arr
+    # Set up the interval data and root tracker classes and cheb blocky
+    # copy array
     interval_data = IntervalData(a, b)
     root_tracker = RootTracker()
     values_arr.memo = {}
@@ -151,9 +151,9 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         solve_func = subdivision_solve_nd
 
     # Initial Solve
-    solve_func(funcs, a, b, deg, interval_data, \
-              root_tracker, tols, max_level,
-              trust_small_evals=trust_small_evals)
+    solve_func(funcs, a, b, deg, interval_data,
+               root_tracker, tols, max_level,
+               trust_small_evals=trust_small_evals)
     root_tracker.keep_possible_duplicates()
 
     # Polishing
@@ -162,7 +162,8 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         interval_data.add_polish_intervals(polish_intervals)
         for new_a, new_b in polish_intervals:
             interval_data.start_polish_interval()
-            solve_func(funcs, new_a, new_b, deg, interval_data, root_tracker, tols, max_level)
+            solve_func(funcs, new_a, new_b, deg, interval_data, 
+                       root_tracker, tols, max_level)
             root_tracker.keep_possible_duplicates(),
     print("\rPercent Finished: 100%{}".format(' '*50))
 
@@ -174,10 +175,13 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         if dim == 1:
             x = np.linspace(a, b, 1000)
             plt.plot(x, funcs(x), color='k')
-            plt.plot(np.real(root_tracker.roots), np.zeros(len(root_tracker.roots)), 'o', color = 'none', markeredgecolor='r')
+            plt.plot(np.real(root_tracker.roots),
+                     np.zeros(len(root_tracker.roots)), 'o', color='none',
+                     markeredgecolor='r')
             plt.show()
         elif dim == 2:
-            interval_data.plot_results(funcs, root_tracker.roots, plot_intervals)
+            interval_data.plot_results(funcs, root_tracker.roots,
+                                       plot_intervals)
 
     if len(root_tracker.potential_roots) != 0:
         warnings.warn("Some intervals subdivided too deep and some potential roots were found. To access these roots, rerun the solver with the keyword return_potentials=True")
@@ -186,6 +190,7 @@ def solve(funcs, a, b, rel_approx_tol=1.e-15, abs_approx_tol=1.e-12,
         return root_tracker.roots, root_tracker.potential_roots
     else:
         return root_tracker.roots
+
 
 @jit
 def transform(x, a, b):
@@ -213,8 +218,8 @@ def transform(x, a, b):
 def initialize_values_arr(dim, deg):
     """Helper function for chebyshev_block_copy.
     Initializes an array to use throughout the whole solve function.
-    Builds one array corresponding to dim and deg that can be used for any
-    block copy of degree less than deg
+    Builds one array corresponding to dim and deg that can be used for
+    any block copy of degree less than deg.
 
     Parameters
     ----------
@@ -250,7 +255,7 @@ def values_arr(dim):
     """
     keys = tuple(initialize_values_arr.memo.keys())
     for idx, k in enumerate(keys):
-        if k[0]==dim:
+        if k[0] == dim:
             break
     return initialize_values_arr.memo[keys[idx]]
 
@@ -294,9 +299,9 @@ def block_copy_slicers(dim, deg):
 
 def chebyshev_block_copy(values_block):
     """This functions helps avoid double evaluation of functions at
-    interpolation points. It takes in a tensor of function evaluation values
-    and copies these values to a new tensor appropriately to prepare for
-    chebyshev interpolation.
+    interpolation points. It takes in a tensor of function evaluation
+    values and copies these values to a new tensor appropriately to
+    prepare for chebyshev interpolation.
 
     Parameters
     ----------
@@ -354,8 +359,8 @@ def interval_approximate_1d(f, a, b, deg, return_bools=False, return_inf_norm=Fa
         inf_norm = np.max(np.abs(values))
 
     coeffs = np.real(np.fft.fft(values/deg))
-    coeffs[0]/=2
-    coeffs[deg]/=2
+    coeffs[0] /= 2
+    coeffs[deg] /= 2
 
     if return_bools:
         # Check to see if the sign changes on the interval
@@ -370,6 +375,7 @@ def interval_approximate_1d(f, a, b, deg, return_bools=False, return_inf_norm=Fa
             return coeffs[:deg+1], inf_norm
         else:
             return coeffs[:deg+1]
+
 @memoize
 def get_cheb_grid(deg, dim, has_eval_grid):
     """Helper function for interval_approximate_nd.
@@ -391,8 +397,12 @@ def get_cheb_grid(deg, dim, has_eval_grid):
     else:
         cheb_values = np.cos(np.arange(deg+1)*np.pi/deg)
         cheb_grids = np.meshgrid(*([cheb_values]*dim), indexing='ij')
-        flatten = lambda x: x.flatten()
+        # Declaring this function here is slightly faster than simply
+        # returning the map of np.ndarray.flatten and cheb_grids.
+        flatten = lambda x: x.flatten()  
         return np.column_stack(tuple(map(flatten, cheb_grids)))
+
+
 def interval_approximate_nd(f, a, b, deg, return_inf_norm=False):
     """Finds the chebyshev approximation of an n-dimensional function on an
     interval.
@@ -492,9 +502,8 @@ def get_subintervals(a, b, dimensions, interval_data, polys, approx_error, check
         A class to run the subinterval checks and keep track of the
         solve progress
     polys : list
-        A list of MultiCheb polynomials representing the function
-        approximations on the interval to subdivide. Used in the
-        subinterval checks.
+        A list of coefficient tensors in the Chebyshev approximations on
+         the interval to subdivide. Used in the subinterval checks.
     approx_error: list of floats
         The bound of the sup norm error of the chebyshev approximation.
     check_subintervals : bool
@@ -647,7 +656,6 @@ def get_abs_approx_tol(func, deg, a, b, dim):
     numSpots = (deg*2)**dim - (deg)**dim
 
     # Multiply by 10 to give a looser tolerance (speed-up)
-    # print(abs_approx_tol*10 / numSpots)
     return abs_approx_tol*10 / numSpots
 
 @memoize
@@ -1090,7 +1098,7 @@ def subdivision_solve_1d(f, a, b, deg, interval_data, root_tracker,
         good_deg = max(len(coeff) - 1, 1)
 
         # Run interval checks to eliminate regions
-        if not sign_change: # Skip checks if there is a sign change
+        if not sign_change:  # Skip checks if there is a sign change
             if interval_data.check_interval(coeff, error, a, b):
                 return
 
@@ -1100,7 +1108,7 @@ def subdivision_solve_1d(f, a, b, deg, interval_data, root_tracker,
             zeros = transform(good_zeros_1d(multCheb(coeff), good_zeros_tol, good_zeros_tol), a, b)
             interval_data.track_interval("Macaulay", [a, b])
             root_tracker.add_roots(zeros, a, b, "Macaulay")
-        except (ConditioningError, TooManyRoots) as e:
+        except (ConditioningError) as e:
             div_spot = a + (b-a)*RAND
             subdivision_solve_1d(f, a, div_spot, good_deg, interval_data, root_tracker, tols, max_level, level+1)
             subdivision_solve_1d(f, div_spot, b, good_deg, interval_data, root_tracker, tols, max_level, level+1)
