@@ -7,7 +7,7 @@ from yroots.Multiplication import create_matrix
 from itertools import product
 import unittest
 import warnings
-import yroots.subdivision as sbd
+
 
 def test_paper_example():
 
